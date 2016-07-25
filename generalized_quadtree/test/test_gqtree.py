@@ -38,6 +38,28 @@ class TestDR(unittest.TestCase):
             test = gq.index([3, 0])
             print ("{0:b}".format(test))
 
+    def test_index_corner(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[0, 0], sidelength=8.0, levels=2)
+        for (index, expected) in [
+                (0b0000, [0.0, 0.0]),
+                (0b0001, [2.0, 0.0]),
+                (0b0010, [0.0, 2.0]),
+                (0b0011, [2.0, 2.0]),
+                (0b0100, [4.0, 0.0]),
+                (0b0101, [6.0, 0.0]),
+                (0b0110, [4.0, 2.0]),
+                (0b0111, [6.0, 2.0]),
+                (0b1000, [0.0, 4.0]),
+                (0b1001, [2.0, 4.0]),
+                (0b1010, [0.0, 6.0]),
+                (0b1011, [2.0, 6.0]),
+                (0b1100, [4.0, 4.0]),
+                (0b1101, [6.0, 4.0]),
+                (0b1110, [4.0, 6.0]),
+                (0b1111, [6.0, 6.0]),
+            ]:
+            self.assertEqual(list(gq.index_corner(index)), expected)
+
     def test_index_inverse(self):
         def round_trip(p_int, levels):
             dims = len(p_int)

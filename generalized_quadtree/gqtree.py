@@ -1,6 +1,7 @@
 
 from . import gqnodes
 import pprint
+import numpy as np
 
 def qs(index, levels, dimensions=2):
     "format quadtree index as binary string"
@@ -15,7 +16,7 @@ class GeneralizedQuadtree:
     def __init__(self, origin, sidelength, levels):
         self.root = None
         # minimum position of the volume
-        self.origin = origin
+        self.origin = np.array(origin)
         # maximum length of each side of the volume
         self.sidelength = sidelength
         # maximum number of levels in the tree
@@ -29,6 +30,10 @@ class GeneralizedQuadtree:
         self.nquadrants1 = self.nquadrants - 1
         # side length of a voxel
         self.min_side = float(sidelength) / self.int_side
+
+    def index_corner(self, index):
+        voxels = int_index_inverse(index, self.levels, self.dimensions)
+        return np.array(voxels) * self.min_side + self.origin
 
     def level_side(self, level):
         return self.sidelength / float(2 ** level)
