@@ -250,3 +250,16 @@ class TestDR(unittest.TestCase):
                    (None, 13): (1000, {'t': {'position': [7, 7], 'w': 1000}}),
                    (0, 0): (1110, {})}
         self.assertEqual(D, expectD)
+
+    def test_adjacency_walk(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=5)
+        gq.add([2,2], "f", {"w": 10})   # summarize
+        gq.add([2,3], "s", {"w": 100})  # summarize
+        gq.add([7,7], "t", {"w": 1000})  # visit
+        D = {}
+        def callback(p, node, t, d):
+            D[(node.level, node.prefix)] = node.data
+        gq.adjacency_walk((7.1, 7.1), callback)
+        expectD = {(None, 864): {'t': {'position': [7, 7], 'w': 1000}}, 
+                   (2, 0): {}}
+        self.assertEqual(D, expectD)
