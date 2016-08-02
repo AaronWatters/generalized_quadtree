@@ -24,8 +24,8 @@ class TestDR(unittest.TestCase):
 
     def test_int_position(self):
         gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=2)
-        self.assertEqual(gq.int_position([1.0, 2.0]), [0, 0])
-        self.assertEqual(gq.int_position([8, 9]), [3, 3])
+        self.assertEqual(list(gq.int_position([1.0, 2.0])), [0, 0])
+        self.assertEqual(list(gq.int_position([8, 9])), [3, 3])
 
     def test_index(self):
         gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=2)
@@ -36,7 +36,7 @@ class TestDR(unittest.TestCase):
             test = gq.index([9, 3])
         with self.assertRaises(AssertionError):
             test = gq.index([3, 0])
-            print ("{0:b}".format(test))
+            #print ("{0:b}".format(test))
 
     def test_index_corner(self):
         gq = gqtree.GeneralizedQuadtree(origin=[0, 0], sidelength=8.0, levels=2)
@@ -232,4 +232,21 @@ class TestDR(unittest.TestCase):
                       ('0b11', ('Leaf 0b1101', {'fifth': {'position': [7.1, 7.1]}}))]]
         self.assertEqual(dump, expected)
 
-        
+    def test_walk(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=2)
+        gq.add([2,7], "f", {"w": 10})
+        gq.add([2,3], "s", {"w": 100})
+        gq.add([7,7], "t", {"w": 1000})
+        D = {}
+        def callback(node, tree, data):
+            ltotal = sum(i["w"] for i in node.data.values())
+            ctotal = sum(c.sum_w
+                         for c in node.children.values())
+            node.sum_w = ctotal + ltotal
+            D[(node.level, node.prefix)] = (node.sum_w, node.data)
+        gq.walk(callback)
+        expectD = {(None, 0): (100, {'s': {'position': [2, 3], 'w': 100}}),
+                   (None, 8): (10, {'f': {'position': [2, 7], 'w': 10}}),
+                   (None, 13): (1000, {'t': {'position': [7, 7], 'w': 1000}}),
+                   (0, 0): (1110, {})}
+        self.assertEqual(D, expectD)

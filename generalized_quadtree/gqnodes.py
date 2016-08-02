@@ -1,11 +1,45 @@
 
+#from . import gqtree
+import numpy as np
+
 class QtInteriorNode:
+
+    _int_position = None 
 
     def __init__(self, prefix, level):
         self.prefix = prefix
         self.level = level
         self.data = {}
         self.children = {}
+
+    def adjacency_walk(self, tree, callback, data, position, iposition):
+        level = self.level
+        my_ipos = self._int_position
+        if my_ipos is None:  
+            my_ipos = tree.index_to_index_position(self.prefix)
+            self._int_position = my_ipos
+        shift = tree.levels - level 
+        level_offset = (my_ipos >> shift) - (iposition >> shift)
+        max_offset = np.max(np.abs(level_offset))
+        #ind = "    " * level
+        #print ind, self._int_position, level, shift, "max", max_offset
+        if max_offset <= 1:
+            #print ind, "expand", level_offset
+            # recursively expand node
+            for node in self.children.values():
+                node.adjacency_walk(tree, callback, data, position, iposition)
+        else:
+            #print ind, "callback", level_offset
+            # visit node without expanding (not adjacent at level)
+            callback(position, self, tree, data)
+
+    def walk(self, tree, callback, data):
+        "walk reverse breadth first passing (node, tree, data) to callback."
+        children = self.children
+        for quadrant in children:
+            child = children[quadrant]
+            child.walk(tree, callback, data)
+        callback(self, tree, data)
 
     def add_new_child(self, node, tree):
         "Add a child in empty quadrant."
@@ -17,6 +51,9 @@ class QtInteriorNode:
         children = self.children
         assert children.get(quadrant) == None, "non-empty quadrant " + repr(quadrant)
         children[quadrant] = node
+        callback = tree.insert_callback
+        if callback is not None and isinstance(node, QtLeafNode):
+            callback(self, node)
 
     def add_leaf(self, leaf, tree):
         level = self.level
@@ -30,6 +67,9 @@ class QtInteriorNode:
         if isinstance(new_child, QtInteriorNode):
             assert new_child.level > level
         children[quadrant] = new_child
+        callback = tree.insert_callback
+        if callback is not None:
+            callback(self, leaf)
 
     def list_dump(self, tree):
         children_dumped = []
@@ -44,9 +84,20 @@ class QtInteriorNode:
 
 class QtLeafNode:
 
+    children = {}  # "read only constant"
+    level = None  # "read only constant"
+
     def __init__(self, prefix, name, info):
         self.prefix = prefix
         self.data = {name: info}
+
+    def adjacency_walk(self, tree, callback, data, position, iposition):
+        # always visit any leaf that is reached.
+        callback(position, self, tree, data)
+
+    def walk(self, tree, callback, data):
+        "walk reverse breadth first passing (node, tree, data) to callback."
+        callback(self, tree, data)
 
     def add(self, name, info):
         self.data[name] = info

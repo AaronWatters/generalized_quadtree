@@ -31,6 +31,29 @@ class GeneralizedQuadtree:
         # side length of a voxel
         self.min_side = float(sidelength) / self.int_side
 
+    # Callback on node insert tree.insert_callback(node, leafxs) when not None.__base__
+    insert_callback = None
+
+    def walk(self, callback, data=None):
+        "walk reverse breadth first passing (node, tree, data) to callback."
+        if self.root is None:
+            return   # Do nothing if tree is empty.
+        self.root.walk(self, callback, data)
+
+    def adjacency_walk(self, position, callback, data=None):
+        """
+        Cover the quadtree.
+        For each leaf visit the leaf or a node containing the leaf once.
+        recurse into quadrants that are adjacent at the same level to
+        the quadrant containing position.
+        call callback(position, node, tree, data) at non-recursed nodes.
+        """
+        if self.root is None:
+            return None
+        iposition = self.int_position(position)
+        #print "iposition", iposition
+        self.root.adjacency_walk(self, callback, data, position, iposition)
+
     def index_corner(self, index):
         voxels = int_index_inverse(index, self.levels, self.dimensions)
         return np.array(voxels) * self.min_side + self.origin
@@ -77,8 +100,6 @@ class GeneralizedQuadtree:
         prefix = (hi_bits & ~nquadrants1) << shift
         return (prefix, quadrant)
 
-    ccount = 0  # debug
-
     def combine(self, node, leaf):
         if node is None:
             return leaf
@@ -120,7 +141,7 @@ class GeneralizedQuadtree:
         # XXXX This permits "negative positions" that round to zero. Bug?
         result = [int((position[i] - origin_i) / min_side)
                   for (i, origin_i) in enumerate(origin)]
-        return result
+        return np.array(result)
 
     def index_position(self, position):
         """
@@ -132,6 +153,13 @@ class GeneralizedQuadtree:
 
     def index(self, position):
         return self.index_position(position)[0]
+
+    def index_to_index_position(self, index):
+        """
+        Convert index back to int position relative to origin
+        """
+        return int_index_inverse(
+            index, self.levels, self.dimensions)
 
     def common_prefix_level(self, index1, index2, from_level=0):
         """
@@ -163,7 +191,7 @@ def int_index_inverse(index, levels, dimensions):
             index = index >> 1
             result[dim] = result[dim] | (bit << level)
             #pr "after {0:b} {1:b}".format(index, result[dim])
-    return result
+    return np.array(result)
 
 def int_index(position_ints, levels):
     result = 0
