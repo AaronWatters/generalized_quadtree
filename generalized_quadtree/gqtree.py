@@ -65,6 +65,15 @@ class GeneralizedQuadtree:
     def level_side(self, level):
         return self.sidelength / float(2 ** level)
 
+    def avg_dist_to_quadrant_point(self, index, level, location):
+        "Heuristic average L1 distance to a point in the quadrant from location."
+        side = self.level_side(level)
+        corner = self.index_corner(index)
+        ur_corner = corner + side
+        location = np.array(location)
+        offset = max(0, max(corner - location), max(location-ur_corner))
+        return offset + side/2.0
+
     def ppnode(self, node):
         pprint.pprint(node.list_dump(self))
 

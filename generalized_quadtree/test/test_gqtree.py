@@ -275,3 +275,19 @@ class TestDR(unittest.TestCase):
         gq.add([7,7], "t", {"w": 1000})  # visit
         names = gq.root.get_names()
         self.assertEqual(set(["f", "s", "t"]), names)
+
+    def test_avg_dist(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=2.0, levels=2)
+        for loc in [(0, 1), (0, 2), (4, 3), (3, 1)]:
+            dist = gq.avg_dist_to_quadrant_point(0, 0, loc)
+            self.assertEqual(dist, 2, repr(loc) + " should have dist 2")
+        for loc in [(1,2), (3, 2), (3, 4), (2, 3)]:
+            dist = gq.avg_dist_to_quadrant_point(0, 0, loc)
+            self.assertEqual(dist, 1, repr(loc) + " should have dist 1")
+        index = gq.index_position((2,2))[0]
+        for loc in [(1, 2), (4, 2), (1, 1), (2, 4)]:
+            dist = gq.avg_dist_to_quadrant_point(index, 1, loc)
+            self.assertEqual(dist, 1.5, repr(loc) + " should have dist 1.5")
+        for loc in [(2,2), (3, 2), (3, 3), (2.5, 2.5), (3.5, 1.8)]:
+            dist = gq.avg_dist_to_quadrant_point(index, 1, loc)
+            self.assertEqual(dist, 0.5, repr((loc, dist)) + " should have dist 0.5")
