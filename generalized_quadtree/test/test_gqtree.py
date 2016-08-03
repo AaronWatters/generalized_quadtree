@@ -263,3 +263,15 @@ class TestDR(unittest.TestCase):
         expectD = {(None, 864): {'t': {'position': [7, 7], 'w': 1000}}, 
                    (2, 0): {}}
         self.assertEqual(D, expectD)
+
+    def test_get_names(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=5)
+        gq.add([2,2], "f", {"w": 10})   # summarize
+        names = gq.root.get_names()
+        self.assertEqual(set(["f"]), names)
+        gq.add([2,3], "s", {"w": 100})  # summarize
+        names = gq.root.get_names()
+        self.assertEqual(set(["f", "s"]), names)
+        gq.add([7,7], "t", {"w": 1000})  # visit
+        names = gq.root.get_names()
+        self.assertEqual(set(["f", "s", "t"]), names)

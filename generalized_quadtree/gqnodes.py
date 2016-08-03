@@ -4,13 +4,23 @@ import numpy as np
 
 class QtInteriorNode:
 
-    _int_position = None 
+    _int_position = None
+    _names = None   # names of all descendents
 
     def __init__(self, prefix, level):
         self.prefix = prefix
         self.level = level
         self.data = {}
         self.children = {}
+
+    def get_names(self):
+        names = self._names
+        if names is None:
+            names = set()
+            for child in self.children.values():
+                names.update(child.get_names())
+            self._names = names
+        return names
 
     def adjacency_walk(self, tree, callback, data, position, iposition):
         level = self.level
@@ -51,9 +61,9 @@ class QtInteriorNode:
         children = self.children
         assert children.get(quadrant) == None, "non-empty quadrant " + repr(quadrant)
         children[quadrant] = node
-        callback = tree.insert_callback
-        if callback is not None and isinstance(node, QtLeafNode):
-            callback(self, node)
+        names = self._names
+        if names is not None:
+            names.update(node.get_names())
 
     def add_leaf(self, leaf, tree):
         level = self.level
@@ -66,10 +76,10 @@ class QtInteriorNode:
         new_child = tree.combine(old_child, leaf)
         if isinstance(new_child, QtInteriorNode):
             assert new_child.level > level
+        names = self._names
+        if names is not None:
+            names.update(leaf.get_names())
         children[quadrant] = new_child
-        callback = tree.insert_callback
-        if callback is not None:
-            callback(self, leaf)
 
     def list_dump(self, tree):
         children_dumped = []
@@ -90,6 +100,9 @@ class QtLeafNode:
     def __init__(self, prefix, name, info):
         self.prefix = prefix
         self.data = {name: info}
+
+    def get_names(self):
+        return set(self.data)
 
     def adjacency_walk(self, tree, callback, data, position, iposition):
         # always visit any leaf that is reached.

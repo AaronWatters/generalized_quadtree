@@ -1,4 +1,11 @@
 
+# Todo:
+#  GraphQuadTree
+#  centroid and names accumulation at nodes
+#  node distance to point
+#  add graph node heuristic
+#  node attraction heuristic
+
 from . import gqnodes
 import pprint
 import numpy as np
@@ -30,9 +37,6 @@ class GeneralizedQuadtree:
         self.nquadrants1 = self.nquadrants - 1
         # side length of a voxel
         self.min_side = float(sidelength) / self.int_side
-
-    # Callback on node insert tree.insert_callback(node, leafxs) when not None.__base__
-    insert_callback = None
 
     def walk(self, callback, data=None):
         "walk reverse breadth first passing (node, tree, data) to callback."
