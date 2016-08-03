@@ -355,3 +355,18 @@ class TestDR(unittest.TestCase):
             ('0b1111', 1.0)]
         self.assertEqual(L, eL)
 
+    def test_quadrant_indices(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=2.0, levels=2)
+        L = list(gq.quadrant_indices(0b0100, 1))
+        sL = [gq.qs(x) for x in L]
+        eL = ['0b0100', '0b0101', '0b0110', '0b0111']
+        self.assertEqual(sL, eL)
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=2.0, levels=4)
+        L = list(gq.quadrant_indices(0b01100000, 2))
+        sL = [gq.qs(x) for x in L]
+        eL = ['0b01100000', '0b01100100', '0b01101000', '0b01101100']
+        self.assertEqual(sL, eL)
+        with self.assertRaises(AssertionError):
+            L = list(gq.quadrant_indices(0b01100000, 4))
+        with self.assertRaises(AssertionError):
+            L = list(gq.quadrant_indices(0b01100010, 2))

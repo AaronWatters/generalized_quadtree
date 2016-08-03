@@ -38,6 +38,23 @@ class GeneralizedQuadtree:
         # side length of a voxel
         self.min_side = float(sidelength) / self.int_side
 
+    def quadrant_indices(self, index, level):
+        """
+        Sequence of quadrant indices at the next level below index.
+        """
+        dimensions = self.dimensions
+        levels = self.levels
+        shift = dimensions * (levels - (level + 1))
+        assert shift >= 0, "no quadrants below leaf level " + repr((levels, level))
+        # Low order bits should be zeros
+        assert (index << (shift + dimensions)) & ((1 << (levels * dimensions)) - 1) == 0, (
+            "bad index " + repr((index, level, shift, self.qs(index)))
+        )
+        step = 1 << shift
+        limit = (self.nquadrants << shift) + index
+        return xrange(index, limit, step)
+
+
     def walk(self, callback, data=None):
         "walk reverse breadth first passing (node, tree, data) to callback."
         if self.root is None:
