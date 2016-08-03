@@ -71,8 +71,30 @@ class GeneralizedQuadtree:
         corner = self.index_corner(index)
         ur_corner = corner + side
         location = np.array(location)
-        offset = max(0, max(corner - location), max(location-ur_corner))
+        offset = max(0, max(corner - location), max(location - ur_corner))
         return offset + side/2.0
+
+    def avg_dist_between_quadrants(self, index1, level1, index2, level2):
+        """
+        Heuristic L1 distance between two points in quadrants.
+        """
+        side1 = self.level_side(level1)
+        side2 = self.level_side(level2)
+        corner1 = self.index_corner(index1)
+        corner2 = self.index_corner(index2)
+        ur_corner1 = corner1 + side1
+        ur_corner2 = corner2 + side2
+        offset = 0  # default
+        intersecting = True
+        for index in (0, 1):
+            d1 = corner1[index] - ur_corner2[index]
+            d2 = corner2[index] - ur_corner1[index]
+            if d1 >= 0 or d2 >= 0:
+                intersecting = False
+            offset = max(offset, corner1[index] - ur_corner2[index], corner2[index] - ur_corner1[index])
+        if intersecting:
+            return 0.5 * max(side1, side2)
+        return offset + 0.5 * (side1 + side2)
 
     def ppnode(self, node):
         pprint.pprint(node.list_dump(self))
@@ -194,6 +216,7 @@ class GeneralizedQuadtree:
                     + repr((levels, index1, index2)))
 
 def int_index_inverse(index, levels, dimensions):
+    index0 = index  # for diagnositics only
     result = [0] * dimensions
     d_order = range(dimensions)
     #pr "start index {0:b}".format(index)
@@ -204,6 +227,7 @@ def int_index_inverse(index, levels, dimensions):
             index = index >> 1
             result[dim] = result[dim] | (bit << level)
             #pr "after {0:b} {1:b}".format(index, result[dim])
+    assert index == 0, "too many bits " + repr((index0, levels, dimensions))
     return np.array(result)
 
 def int_index(position_ints, levels):

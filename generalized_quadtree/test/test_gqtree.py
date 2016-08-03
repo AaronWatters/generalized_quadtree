@@ -73,6 +73,8 @@ class TestDR(unittest.TestCase):
         round_trip((0b1011, 0b0110), 4)
         round_trip((0b10, 0b01, 0b11), 2)
         round_trip((0b101, 0b011, 0b000, 0b111, 0b110), 3)
+        with self.assertRaises(AssertionError):
+            t = gqtree.int_index_inverse(0b101010, 2, 2)
 
     def test_common_prefix(self):
         gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=8.0, levels=2)
@@ -288,6 +290,68 @@ class TestDR(unittest.TestCase):
         for loc in [(1, 2), (4, 2), (1, 1), (2, 4)]:
             dist = gq.avg_dist_to_quadrant_point(index, 1, loc)
             self.assertEqual(dist, 1.5, repr(loc) + " should have dist 1.5")
-        for loc in [(2,2), (3, 2), (3, 3), (2.5, 2.5), (3.5, 1.8)]:
+        for loc in [(2,2), (3, 2), (3, 3), (2.5, 2.5)]:
             dist = gq.avg_dist_to_quadrant_point(index, 1, loc)
             self.assertEqual(dist, 0.5, repr((loc, dist)) + " should have dist 0.5")
+
+    def test_quad_dist(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[1.0, 2.0], sidelength=4.0, levels=2)
+        avg = gq.avg_dist_between_quadrants
+        L = [(gq.qs(index), avg(0, 2, index, 2)) for index in range(16)]
+        eL = \
+            [('0b0000', 0.5),
+             ('0b0001', 1.0),
+             ('0b0010', 1.0),
+             ('0b0011', 1.0),
+             ('0b0100', 2.0),
+             ('0b0101', 3.0),
+             ('0b0110', 2.0),
+             ('0b0111', 3.0),
+             ('0b1000', 2.0),
+             ('0b1001', 2.0),
+             ('0b1010', 3.0),
+             ('0b1011', 3.0),
+             ('0b1100', 2.0),
+             ('0b1101', 3.0),
+             ('0b1110', 3.0),
+             ('0b1111', 3.0)]
+        self.assertEqual(L, eL)
+        L = [(gq.qs(index), avg(0, 1, index, 2)) for index in range(16)]
+        eL = \
+           [('0b0000', 1.0),
+            ('0b0001', 1.0),
+            ('0b0010', 1.0),
+            ('0b0011', 1.0),
+            ('0b0100', 1.5),
+            ('0b0101', 2.5),
+            ('0b0110', 1.5),
+            ('0b0111', 2.5),
+            ('0b1000', 1.5),
+            ('0b1001', 1.5),
+            ('0b1010', 2.5),
+            ('0b1011', 2.5),
+            ('0b1100', 1.5),
+            ('0b1101', 2.5),
+            ('0b1110', 2.5),
+            ('0b1111', 2.5)]
+        self.assertEqual(L, eL)
+        L = [(gq.qs(index), avg(0b1100, 2, index, 2)) for index in range(16)]
+        eL = \
+           [('0b0000', 2.0),
+            ('0b0001', 2.0),
+            ('0b0010', 2.0),
+            ('0b0011', 1.0),
+            ('0b0100', 2.0),
+            ('0b0101', 2.0),
+            ('0b0110', 1.0),
+            ('0b0111', 1.0),
+            ('0b1000', 2.0),
+            ('0b1001', 1.0),
+            ('0b1010', 2.0),
+            ('0b1011', 1.0),
+            ('0b1100', 0.5),
+            ('0b1101', 1.0),
+            ('0b1110', 1.0),
+            ('0b1111', 1.0)]
+        self.assertEqual(L, eL)
+
