@@ -9,6 +9,7 @@
 from . import gqnodes
 import pprint
 import numpy as np
+from numpy.linalg import norm
 
 def qs(index, levels, dimensions=2):
     "format quadtree index as binary string"
@@ -26,6 +27,7 @@ class GeneralizedQuadtree:
         self.origin = np.array(origin)
         # maximum length of each side of the volume
         self.sidelength = sidelength
+        self.center = self.origin + self.sidelength * 0.5
         # maximum number of levels in the tree
         self.levels = levels
         # number of dimensions of the volume
@@ -54,12 +56,25 @@ class GeneralizedQuadtree:
         limit = (self.nquadrants << shift) + index
         return xrange(index, limit, step)
 
-
     def walk(self, callback, data=None):
         "walk reverse breadth first passing (node, tree, data) to callback."
         if self.root is None:
             return   # Do nothing if tree is empty.
         self.root.walk(self, callback, data)
+
+    def adjacent(self, index1, index2, level, pos1=None, pos2=None):
+        """
+        Test whether quadrants at level containing indices have abs
+        common border or vertex.
+        """
+        shift = self.levels - level
+        if pos1 is None:
+            pos1 = self.index_to_index_position(index1)
+        if pos2 is None:
+            pos2 = self.index_to_index_position(index2)
+        level_offset = (pos1 >> shift) - (pos2 >> shift)
+        max_offset = np.max(np.abs(level_offset))
+        return max_offset <= 1
 
     def adjacency_walk(self, position, callback, data=None):
         """
@@ -139,6 +154,68 @@ class GeneralizedQuadtree:
         info["position"] = at_position
         leaf = gqnodes.QtLeafNode(pos_index, name, info)
         self.root = self.combine(self.root, leaf)
+
+    def add_at_min_penalty(self, node_penalty_fn, name, info=None, initial_penalty_fn=None, normalize=None):
+        
+        # p "insert", (name, info)
+        root = self.root
+        if self.root is None:
+            # add node at center
+            # p "adding initial node"
+            return self.add(self.center, name, info)
+        index = 0
+        index_to_node = {0: self.root}
+        for level in range(self.levels):
+            # expand any adjacent nodes at this level
+            for node_index in index_to_node.keys():
+                # p "looking for nodes to expand for", self.qs(index)
+                node = index_to_node[node_index]
+                if (isinstance(node, gqnodes.QtInteriorNode) and
+                    node.level<=level and
+                    self.adjacent(index, node_index, node.level)):
+                    # p "    expanding", node.level, self.qs(node.prefix)
+                    del index_to_node[node_index]
+                    children = node.children
+                    for quadrant in children:
+                        child = children[quadrant]
+                        # p "   expand child", child.level, self.qs(child.prefix)
+                        index_to_node[child.prefix] = child
+            # find index of best quadrant
+            best_penalty = None
+            best_corner = None
+            for qindex in self.quadrant_indices(index, level):
+                voxels = int_index_inverse(qindex, self.levels, self.dimensions)
+                corner = self.index_corner(qindex)
+                # p "    qindex", self.qs(qindex), voxels, corner, "at level", level
+                total_penalty = 0
+                if initial_penalty_fn is not None:
+                    total_penalty = initial_penalty_fn(qindex, voxels, corner)
+                for node_index in index_to_node:
+                    node = index_to_node[node_index]
+                    node_penalty = node_penalty_fn(node, qindex, voxels, corner)
+                    total_penalty += node_penalty
+                    # p "        penalty", self.qs(node.prefix), node_penalty, total_penalty, node.get_names()
+                penalty = total_penalty
+                if normalize:
+                    penalty = normalize(total_penalty)
+                # p "    total penalty", penalty
+                if best_penalty is None or penalty < best_penalty:
+                    # p "    choosing", self.qs(qindex)
+                    best_penalty = penalty
+                    best_corner = corner
+                    index = qindex
+                elif penalty == best_penalty:
+                    # prefer nearer to the center, deterministic choice (for testing)
+                    new_norm = norm(self.center - corner)
+                    best_norm = norm(self.center - best_corner)
+                    if new_norm < best_norm or (new_norm == best_norm and qindex < index):
+                        # p "    preferring", self.qs(qindex)
+                        best_penalty = penalty
+                        best_corner = corner
+                        index = qindex
+        position = self.index_corner(index)
+        # p "final position", self.qs(index), position
+        self.add(position, name, info)
 
     def quadrant(self, index, at_level):
         assert at_level >= 0

@@ -147,8 +147,6 @@ class TestDR(unittest.TestCase):
         gq.add([1,1], "second")
         gq.add([0,0], "third")
         dump = gq.list_dump()
-        print "ADD3"
-        pprint.pprint(dump)
         expect = [
             'node 0b0000 LV1',
             {},
@@ -184,7 +182,6 @@ class TestDR(unittest.TestCase):
         self.assertEqual(dump, None)
         gq.add([7.1, 4.2], "first")
         dump = gq.list_dump()
-        print "test_add"
         #pprint.pprint(dump)
         expect = ('Leaf 0b0111', {'first': {'position': [7.1, 4.2]}})
         self.assertEqual(dump, expect)
@@ -370,3 +367,75 @@ class TestDR(unittest.TestCase):
             L = list(gq.quadrant_indices(0b01100000, 4))
         with self.assertRaises(AssertionError):
             L = list(gq.quadrant_indices(0b01100010, 2))
+
+    def test_adjacent(self):
+        gq = gqtree.GeneralizedQuadtree(origin=[0, 0], sidelength=8.0, levels=8)
+        for (loc1, loc2) in [((3, 1), (4.1, 1)), ((3, 3), (4.1, 4.1)), ((6, 3), (6, 4.1))]:
+            index1 = gq.index_position(loc1)[0]
+            index2 = gq.index_position(loc2)[0]
+            for level in range(4):
+                self.assertEqual(gq.adjacent(index1, index2, level), True,
+                    repr((index1, index2)) + " should be adjacent at " + repr(level))
+            for level in range(4, 9):
+                self.assertEqual(gq.adjacent(index1, index2, level), False,
+                    repr((index1, index2)) + " should not be adjacent at " + repr(level))
+
+    def test_add_min(self):
+        def node_penalty_fn(node, qindex, voxels, corner):
+            if qindex == node.prefix:
+                return len(node.get_names())
+            return 0
+        gq = gqtree.GeneralizedQuadtree(origin=[0, 0], sidelength=8.0, levels=1)
+        for name in list("abcd"):
+            gq.add_at_min_penalty(node_penalty_fn, name)
+        dump = gq.list_dump()
+        expect = \
+            ['node 0b00 LV0',
+            {},
+            [('0b00', ('Leaf 0b00', {'d': {'position': [0.0, 0.0]}})),
+            ('0b01', ('Leaf 0b01', {'b': {'position': [4.0, 0.0]}})),
+            ('0b10', ('Leaf 0b10', {'c': {'position': [0.0, 4.0]}})),
+            ('0b11', ('Leaf 0b11', {'a': {'position': [4.0, 4.0]}}))]]
+        self.assertEqual(expect, dump)
+
+    def test_add_min2(self):
+        def node_penalty_fn(node, qindex, voxels, corner):
+            if qindex == node.prefix:
+                return len(node.get_names())
+            return 0
+        gq = gqtree.GeneralizedQuadtree(origin=[0, 0], sidelength=8.0, levels=2)
+        for name in (str(i) for i in range(16)):
+            gq.add_at_min_penalty(node_penalty_fn, name)
+        dump = gq.list_dump()
+        expect = \
+            ['node 0b0000 LV0',
+            {},
+            [('0b00',
+            ['node 0b0000 LV1',
+                {},
+                [('0b00', ('Leaf 0b0000', {'15': {'position': [0.0, 0.0]}})),
+                ('0b01', ('Leaf 0b0001', {'6': {'position': [2.0, 0.0]}})),
+                ('0b10', ('Leaf 0b0010', {'11': {'position': [0.0, 2.0]}})),
+                ('0b11', ('Leaf 0b0011', {'5': {'position': [2.0, 2.0]}}))]]),
+            ('0b01',
+            ['node 0b0100 LV1',
+                {},
+                [('0b00', ('Leaf 0b0100', {'9': {'position': [4.0, 0.0]}})),
+                ('0b01', ('Leaf 0b0101', {'13': {'position': [6.0, 0.0]}})),
+                ('0b10', ('Leaf 0b0110', {'1': {'position': [4.0, 2.0]}})),
+                ('0b11', ('Leaf 0b0111', {'2': {'position': [6.0, 2.0]}}))]]),
+            ('0b10',
+            ['node 0b1000 LV1',
+                {},
+                [('0b00', ('Leaf 0b1000', {'10': {'position': [0.0, 4.0]}})),
+                ('0b01', ('Leaf 0b1001', {'3': {'position': [2.0, 4.0]}})),
+                ('0b10', ('Leaf 0b1010', {'14': {'position': [0.0, 6.0]}})),
+                ('0b11', ('Leaf 0b1011', {'4': {'position': [2.0, 6.0]}}))]]),
+            ('0b11',
+            ['node 0b1100 LV1',
+                {},
+                [('0b00', ('Leaf 0b1100', {'0': {'position': [4.0, 4.0]}})),
+                ('0b01', ('Leaf 0b1101', {'7': {'position': [6.0, 4.0]}})),
+                ('0b10', ('Leaf 0b1110', {'8': {'position': [4.0, 6.0]}})),
+                ('0b11', ('Leaf 0b1111', {'12': {'position': [6.0, 6.0]}}))]])]]
+        self.assertEqual(expect, dump)

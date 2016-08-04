@@ -24,6 +24,7 @@ class QtInteriorNode:
 
     def adjacency_walk(self, tree, callback, data, position, iposition):
         level = self.level
+        # XXXX could use tree.adjacent(...)?
         my_ipos = self._int_position
         if my_ipos is None:  
             my_ipos = tree.index_to_index_position(self.prefix)
@@ -120,4 +121,9 @@ class QtLeafNode:
             self.add(name, info)
 
     def list_dump(self, tree):
-        return ("Leaf " + tree.qs(self.prefix), self.data)
+        data = self.data.copy()
+        # convert to lists (from array) to enable comparisons
+        for name in data:
+            d = data[name] = data[name].copy()
+            d["position"] = list(d["position"])
+        return ("Leaf " + tree.qs(self.prefix), data)
